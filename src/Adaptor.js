@@ -55,7 +55,7 @@ export function command(string) {
       privateKey: `/home/${username}/.ssh/id_rsa`,
     })
     .then(() => {
-      return ssh.execCommand('hh_client --json', { cwd:'/var/www' })
+      return ssh.execCommand(string, { cwd: `/home/${username}` })
         .then((result) => {
           console.log('STDOUT: ' + result.stdout)
           console.log('STDERR: ' + result.stderr)

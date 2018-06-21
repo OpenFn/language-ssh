@@ -4,9 +4,7 @@ import {
   expandReferences,
   composeNextState,
 } from 'language-common';
-import Client from 'ssh2-sftp-client';
-import csv from 'csvtojson';
-
+import node_ssh from 'node-ssh';
 
 /**
  * Execute a sequence of operations.
@@ -39,9 +37,10 @@ export function execute(...operations) {
  * @param {string} path - Path to resource
  * @returns {Operation}
  */
-export function get(filePath) {
+export function command(string) {
   return (state) => {
-    const sftp = new Client();
+
+    const ssh = new node_ssh()
 
     const {
       host,
@@ -50,35 +49,23 @@ export function get(filePath) {
       port,
     } = state.configuration;
 
-    return sftp.connect({
+    return ssh.connect({
       host,
-      port,
       username,
-      password,
-    }).then(() => {
-      return sftp.get(filePath)
-    }).then((data) => {
-      const arr = [];
-      return new Promise((resolve, reject) => {
-        return csv()
-          .fromStream(data)
-          .on('json', (jsonObject) => {
-            arr.push(jsonObject);
-          })
-          .on('done', (error) => {
-            if (error) {
-              reject(error);
-            }
-            sftp.end();
-            console.log(arr);
-            resolve(arr);
-          });
-      }).then(json => composeNextState(state, json));
-    }).catch((e) => {
-      sftp.end();
-      console.log(e);
-    });
-  };
+      privateKey: `/home/${username}/.ssh/id_rsa`,
+    })
+    .then(() => {
+      return ssh.execCommand('hh_client --json', { cwd:'/var/www' })
+        .then((result) => {
+          console.log('STDOUT: ' + result.stdout)
+          console.log('STDERR: ' + result.stderr)
+        })
+    })
+    .then(() => {
+      ssh.dispose()
+    })
+
+  }
 }
 
 export {
